@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Face Search UI</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 24px; max-width: 1100px; }
+      .card { border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+      .error { color: #b00020; }
+      .success { color: #006400; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+      .item { border: 1px solid #ccc; border-radius: 8px; padding: 8px; }
+      img { max-width: 100%; border-radius: 6px; }
+      label { display: block; margin: 8px 0 4px; }
+      button { margin-top: 8px; }
+    </style>
+  </head>
+  <body>
+    <h1>Поиск по лицу (веб-интерфейс)</h1>
+
+    <div class="card">
+      <h2>1) Массовая загрузка и индексация</h2>
+      <form action="/index" method="post" enctype="multipart/form-data">
+        <label>Выберите фото (.jpg/.jpeg/.png)</label>
+        <input type="file" name="images" multiple accept=".jpg,.jpeg,.png" required />
+        <br />
+        <button type="submit">Загрузить и проиндексировать</button>
+      </form>
+      <p>Индексированных лиц: <strong>{{ indexed_count or 0 }}</strong></p>
+    </div>
+
+    <div class="card">
+      <h2>2) Загрузка фото для поиска</h2>
+      <form action="/search" method="post" enctype="multipart/form-data">
+        <label>Фото с лицом</label>
+        <input type="file" name="query" accept=".jpg,.jpeg,.png" required />
+        <label>Порог похожести (distance)</label>
+        <input type="number" name="threshold" step="0.01" min="0" max="2" value="{{ threshold or 0.6 }}" />
+        <br />
+        <button type="submit">Найти совпадения</button>
+      </form>
+      {% if query_url %}
+        <p>Фото запроса:</p>
+        <img src="{{ query_url }}" alt="query image" style="max-width: 240px" />
+      {% endif %}
+    </div>
+
+    {% if error %}
+      <p class="error">{{ error }}</p>
+    {% endif %}
+    {% if success %}
+      <p class="success">{{ success }}</p>
+    {% endif %}
+
+    <h2>Результаты (ранжированы: меньший distance лучше)</h2>
+    <div class="grid">
+      {% for item in matches %}
+      <div class="item">
+        <img src="{{ item.url }}" alt="match" />
+        <p><strong>distance:</strong> {{ '%.4f'|format(item.distance) }}</p>
+        <p style="word-break: break-all">{{ item.path }}</p>
+      </div>
+      {% endfor %}
+    </div>
+    {% if matches is defined and matches|length == 0 %}
+      <p>Совпадений пока нет.</p>
+    {% endif %}
+  </body>
+</html>
