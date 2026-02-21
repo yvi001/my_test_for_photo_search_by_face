@@ -18,7 +18,11 @@ def _require_face_recognition() -> None:
         )
 
 
-def _extract_query_encoding(query_image: str) -> Any:
+def find_matches(query_image: str, index: list[dict[str, Any]], threshold: float = 0.6) -> list[str]:
+    """Return image paths whose indexed faces match the query face by threshold."""
+
+    _require_face_recognition()
+
     query_path = Path(query_image)
     if not query_path.exists() or not query_path.is_file():
         raise FileNotFoundError(f"Query image not found: {query_image}")
@@ -29,40 +33,19 @@ def _extract_query_encoding(query_image: str) -> Any:
     if not query_encodings:
         raise ValueError("No face found in query image")
 
-    return query_encodings[0]
+    query_encoding = query_encodings[0]
 
-
-def find_ranked_matches(
-    query_image: str,
-    index: list[dict[str, Any]],
-    threshold: float = 0.6,
-) -> list[dict[str, float | str]]:
-    """Return ranked unique image matches with distance sorted ascending."""
-
-    _require_face_recognition()
-
-    query_encoding = _extract_query_encoding(query_image)
-    best_distances: dict[str, float] = {}
+    matches: list[str] = []
+    seen: set[str] = set()
 
     for item in index:
         indexed_encoding = item["encoding"]
-        distance = float(face_recognition.face_distance([indexed_encoding], query_encoding)[0])
+        distance = face_recognition.face_distance([indexed_encoding], query_encoding)[0]
 
         if distance <= threshold:
-            path = str(item["path"])
-            prev = best_distances.get(path)
-            if prev is None or distance < prev:
-                best_distances[path] = distance
+            path = item["path"]
+            if path not in seen:
+                seen.add(path)
+                matches.append(path)
 
-    ranked = [
-        {"path": path, "distance": distance}
-        for path, distance in sorted(best_distances.items(), key=lambda pair: pair[1])
-    ]
-    return ranked
-
-
-def find_matches(query_image: str, index: list[dict[str, Any]], threshold: float = 0.6) -> list[str]:
-    """Return image paths whose indexed faces match the query face by threshold."""
-
-    ranked = find_ranked_matches(query_image, index, threshold=threshold)
-    return [item["path"] for item in ranked]
+    return matches
