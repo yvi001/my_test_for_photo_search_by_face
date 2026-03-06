@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% set active_tab = "persons" %}
+{% set current_project = project %}
+{% block title %}Persons – {{ project.name }}{% endblock %}
+{% block page_title %}Persons{% endblock %}
+
+{% block content %}
+{% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+
+<div class="row">
+  <div class="col">
+    <div class="card">
+      <h2>Add Person</h2>
+      <form method="post" action="{{ url_for('person_create', project_id=project.id) }}">
+        <label>Name</label>
+        <input type="text" name="name" required placeholder="Full name"/>
+        <button type="submit" class="btn btn-primary">Create</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="col" style="flex:3">
+    <div class="card">
+      <h2>All Persons ({{ persons | length }})</h2>
+      {% if persons %}
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px">
+          {% for person in persons %}
+          <a href="{{ url_for('person_detail', project_id=project.id, person_id=person.id) }}"
+             style="text-decoration:none;color:inherit">
+            <div class="card" style="text-align:center;padding:16px;margin-bottom:0">
+              {# Avatar #}
+              {% if person.avatar_face_id and face_map.get(person.avatar_face_id) %}
+                {% set av = face_map[person.avatar_face_id] %}
+                <img src="{{ url_for('serve_file', subpath=av.thumbnail_path) }}"
+                     style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid #7c3aed"
+                     alt="{{ person.name }}"/>
+              {% else %}
+                <div style="width:72px;height:72px;border-radius:50%;background:#ede9fe;display:inline-flex;align-items:center;justify-content:center;font-size:1.8rem;color:#7c3aed;border:3px solid #ede9fe">
+                  {{ person.name[0].upper() }}
+                </div>
+              {% endif %}
+              <div style="font-weight:600;margin-top:8px">{{ person.name }}</div>
+              {% if person.tags %}
+                <div style="margin-top:4px">
+                  {% for tag in person.tags[:3] %}<span class="tag">{{ tag }}</span>{% endfor %}
+                </div>
+              {% endif %}
+            </div>
+          </a>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="empty">No persons yet. Create one or assign clusters from the Clustering tab.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

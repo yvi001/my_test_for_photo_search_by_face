@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% set active_tab = "photos" %}
+{% set current_project = project %}
+{% block title %}{{ project.name }} – Photos{% endblock %}
+{% block page_title %}Photos{% endblock %}
+
+{% block topbar_actions %}
+  <span class="badge">{{ photos | length }} photo(s)</span>
+{% endblock %}
+
+{% block content %}
+{% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+
+{# Active job progress bars (auto-poll via HTMX) #}
+{% for job in active_jobs %}
+  {% include "_job_status.html" %}
+{% endfor %}
+
+<div class="card">
+  <h2>Upload Photos</h2>
+  <form method="post" action="{{ url_for('photos_upload', project_id=project.id) }}"
+        enctype="multipart/form-data">
+    <label>Select images (.jpg / .jpeg / .png)</label>
+    <input type="file" name="photos" multiple accept=".jpg,.jpeg,.png" required/>
+    <button type="submit" class="btn btn-primary">Upload &amp; Extract Faces</button>
+  </form>
+</div>
+
+{% if photos %}
+<div class="card">
+  <h2>Gallery</h2>
+  <div class="photo-grid">
+    {% for photo in photos %}
+    <div class="photo-card">
+      <a href="{{ url_for('photo_detail', project_id=project.id, photo_id=photo.id) }}">
+        {% if photo.thumbnail_path %}
+          <img src="{{ url_for('serve_file', subpath=photo.thumbnail_path) }}"
+               alt="{{ photo.original_filename }}" loading="lazy"/>
+        {% else %}
+          <div style="width:100%;height:140px;background:#e5e7eb;display:flex;align-items:center;justify-content:center;color:#9ca3af">No preview</div>
+        {% endif %}
+      </a>
+      <div class="info">
+        <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="{{ photo.original_filename }}">
+          {{ photo.original_filename }}
+        </div>
+        <div class="status status-{{ photo.status }}">{{ photo.status }}
+          {% if photo.status == 'indexed' %}&nbsp;· {{ photo.face_count }} face(s){% endif %}
+        </div>
+        {% if photo.status == 'failed' and photo.error %}
+          <div style="color:#ef4444;font-size:0.72rem" title="{{ photo.error }}">{{ photo.error[:60] }}</div>
+        {% endif %}
+        <form method="post"
+              action="{{ url_for('photo_delete', project_id=project.id, photo_id=photo.id) }}"
+              style="margin-top:4px"
+              onsubmit="return confirm('Delete this photo?')">
+          <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% else %}
+  <p class="empty">No photos yet. Upload some above.</p>
+{% endif %}
+{% endblock %}

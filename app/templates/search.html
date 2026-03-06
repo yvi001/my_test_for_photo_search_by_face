@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% set active_tab = "search" if current_project is defined and current_project else "search_global" %}
+{% block title %}Search – FaceSearch{% endblock %}
+{% block page_title %}Face Search{% endblock %}
+
+{% block content %}
+{% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+
+<div class="row">
+  {# Search forms #}
+  <div class="col" style="max-width:340px">
+
+    {# Search by uploaded image #}
+    <div class="card">
+      <h2>Search by Photo</h2>
+      <form method="post" action="{{ url_for('search_by_image') }}" enctype="multipart/form-data">
+        <label>Upload query image</label>
+        <input type="file" name="query" accept=".jpg,.jpeg,.png" required/>
+
+        <label>Search in projects</label>
+        {% for p in projects %}
+          <label style="font-weight:normal;display:flex;gap:6px;align-items:center;margin-bottom:4px">
+            <input type="checkbox" name="project_ids" value="{{ p.id }}"
+                   {{ 'checked' if (current_project is defined and current_project and current_project.id == p.id) or not (current_project is defined and current_project) }}>
+            {{ p.name }}
+          </label>
+        {% endfor %}
+
+        <label style="margin-top:8px">Similarity threshold (lower = stricter)</label>
+        <input type="number" name="threshold" value="{{ threshold or 0.6 }}" step="0.05" min="0.1" max="1.5"/>
+
+        {% if query_faces is defined and query_faces %}
+          <label>Which face in the query image?</label>
+          <select name="face_index">
+            {% for qf in query_faces %}
+              <option value="{{ qf.index }}" {{ 'selected' if query_face_index == qf.index }}>
+                Face {{ qf.index + 1 }}
+              </option>
+            {% endfor %}
+          </select>
+        {% else %}
+          <input type="hidden" name="face_index" value="0"/>
+        {% endif %}
+
+        <button type="submit" class="btn btn-primary">Search</button>
+      </form>
+    </div>
+
+    {# Search by person #}
+    {% if persons is defined and persons %}
+    <div class="card">
+      <h2>Search by Person</h2>
+      <form method="post" action="{{ url_for('search_by_person') }}">
+        <label>Person</label>
+        <select name="person_id" required>
+          <option value="">— select person —</option>
+          {% for p in persons %}
+            <option value="{{ p.id }}" {{ 'selected' if searched_person is defined and searched_person and searched_person.id == p.id }}>{{ p.name }}</option>
+          {% endfor %}
+        </select>
+        {% for p in projects %}
+          <input type="hidden" name="project_ids" value="{{ p.id }}">
+        {% endfor %}
+        <label>Threshold</label>
+        <input type="number" name="threshold" value="{{ threshold or 0.6 }}" step="0.05" min="0.1" max="1.5"/>
+        <button type="submit" class="btn btn-primary">Search</button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+
+  {# Results #}
+  <div class="col">
+    {% if results is not none %}
+      {% if searched_person is defined and searched_person %}
+        <h2 style="margin-bottom:12px">Results for: <em>{{ searched_person.name }}</em></h2>
+      {% else %}
+        <h2 style="margin-bottom:12px">Results ({{ results | length }})</h2>
+      {% endif %}
+
+      {% if results %}
+        <div class="photo-grid">
+          {% for m in results %}
+            {% set photo = m.photo %}
+            <div class="photo-card">
+              {% if photo and photo.thumbnail_path %}
+                <a href="{{ url_for('photo_detail', project_id=photo.project_id, photo_id=photo.id) }}">
+                  <img src="{{ url_for('serve_file', subpath=photo.thumbnail_path) }}"
+                       alt="{{ photo.original_filename if photo }}" loading="lazy"/>
+                </a>
+              {% else %}
+                <div style="width:100%;height:140px;background:#e5e7eb;display:flex;align-items:center;justify-content:center;color:#9ca3af">No preview</div>
+              {% endif %}
+              <div class="info">
+                <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                  {{ photo.original_filename if photo else m.path.split('/')[-1] }}
+                </div>
+                <div>distance: <strong>{{ '%.4f' | format(m.distance) }}</strong></div>
+                {% if m.person %}
+                  <div><span class="tag">{{ m.person.name }}</span></div>
+                {% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="empty">No matches found. Try increasing the threshold.</p>
+      {% endif %}
+    {% else %}
+      <p class="empty">Upload a query image or select a person to search.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

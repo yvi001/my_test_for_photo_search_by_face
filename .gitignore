@@ -1,0 +1,42 @@
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# App data (photos, database)
+data/
+data_test/
+
+# Test artifacts
+test_out.txt
+test_err.txt
+test_photos/
+
+# Personal/dev scripts
+check_faces_page.py
+check_search.py
+dl_photos.py
+test_http.py
+test_imports.py
+test_ui_workflow.py
+run_dl.ps1
+run_e2e_test.ps1
+run_http_test.ps1
+run_pip.ps1
+run_server.ps1
+run_test.ps1
+run_web.ps1
+test_web.ps1
+make_test_photos.ps1
+
+# Claude Code memory (local only)
+.claude/
+
+# IDE
+.vscode/
+.idea/

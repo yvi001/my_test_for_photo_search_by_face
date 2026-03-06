@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% set active_tab = "photos" %}
+{% set current_project = project %}
+{% block title %}{{ photo.original_filename }} – FaceSearch{% endblock %}
+{% block page_title %}{{ photo.original_filename }}{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('project_photos', project_id=project.id) }}" class="btn btn-secondary btn-sm">← Back</a>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col" style="flex:2">
+    <div class="card">
+      <img src="{{ url_for('serve_file', subpath=photo.stored_path) }}"
+           alt="{{ photo.original_filename }}"
+           style="max-width:100%;border-radius:8px"/>
+      <div class="text-muted mt-8">
+        {{ photo.width }}×{{ photo.height }}px &nbsp;·&nbsp;
+        {{ (photo.file_size / 1024) | round(1) }} KB &nbsp;·&nbsp;
+        uploaded {{ photo.uploaded_at.strftime('%Y-%m-%d %H:%M') }} &nbsp;·&nbsp;
+        status: <span class="status-{{ photo.status }}">{{ photo.status }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="card">
+      <h2>Detected Faces ({{ faces | length }})</h2>
+      {% if faces %}
+        <div class="face-grid">
+          {% for face in faces %}
+          <div class="face-tile {{ 'assigned' if face.person_id }}">
+            {% if face.thumbnail_path %}
+              <img src="{{ url_for('serve_file', subpath=face.thumbnail_path) }}"
+                   alt="face {{ loop.index }}" loading="lazy"/>
+            {% else %}
+              <div style="width:80px;height:80px;border-radius:50%;background:#e5e7eb;display:inline-flex;align-items:center;justify-content:center;font-size:1.5rem">👤</div>
+            {% endif %}
+            <div class="name">
+              {% if face.person_id and person_map.get(face.person_id) %}
+                <a href="{{ url_for('person_detail', project_id=project.id, person_id=face.person_id) }}">
+                  {{ person_map[face.person_id].name }}
+                </a>
+              {% else %}
+                Unknown
+              {% endif %}
+            </div>
+            <form method="post"
+                  action="{{ url_for('face_assign', project_id=project.id, face_id=face.id) }}"
+                  style="margin-top:4px">
+              <select name="person_id" style="font-size:0.75rem;padding:3px 4px;margin-bottom:0"
+                      onchange="this.form.submit()">
+                <option value="">— unassign —</option>
+                {% for person in person_map.values() %}
+                  <option value="{{ person.id }}" {{ 'selected' if face.person_id == person.id }}>
+                    {{ person.name }}
+                  </option>
+                {% endfor %}
+              </select>
+            </form>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="empty">No faces detected in this photo.</p>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <h2>Actions</h2>
+      <a href="{{ url_for('search_in_project', project_id=project.id) }}?photo_id={{ photo.id }}"
+         class="btn btn-primary btn-sm">Search similar faces</a>
+      <form method="post"
+            action="{{ url_for('photo_delete', project_id=project.id, photo_id=photo.id) }}"
+            style="display:inline;margin-left:8px"
+            onsubmit="return confirm('Delete this photo?')">
+        <button type="submit" class="btn btn-danger btn-sm">Delete photo</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

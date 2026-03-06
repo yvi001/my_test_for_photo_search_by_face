@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% set active_tab = "cluster" %}
+{% set current_project = project %}
+{% block title %}Clustering – {{ project.name }}{% endblock %}
+{% block page_title %}Face Clustering{% endblock %}
+
+{% block content %}
+
+{# Active job progress #}
+{% for job in active_jobs %}
+  {% include "_job_status.html" %}
+{% endfor %}
+
+<div class="row">
+  <div class="col">
+    <div class="card">
+      <h2>Run Auto-Clustering</h2>
+      <p class="text-muted" style="margin-bottom:12px">
+        DBSCAN groups similar faces together. Lower <strong>eps</strong> = stricter grouping.
+        Faces that don't fit any cluster are left unassigned.
+      </p>
+      <form method="post" action="{{ url_for('cluster_run', project_id=project.id) }}">
+        <label>Distance threshold (eps)</label>
+        <input type="number" name="eps" value="0.5" step="0.05" min="0.1" max="1.5"/>
+        <label>Minimum faces per cluster</label>
+        <input type="number" name="min_samples" value="2" min="1" max="20"/>
+        <button type="submit" class="btn btn-primary">Run Clustering</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="col" style="flex:2">
+    {% if clusters %}
+      <p class="text-muted" style="margin-bottom:12px">
+        {{ clusters | length }} cluster(s) found. Review and assign each to a person.
+      </p>
+      {% for cluster in clusters %}
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap">
+          <strong>Cluster {{ loop.index }}</strong>
+          <span class="badge">{{ cluster.face_ids | length }} face(s)</span>
+          {% if cluster.person_id and person_map.get(cluster.person_id) %}
+            <span class="tag">{{ person_map[cluster.person_id].name }}</span>
+          {% endif %}
+
+          <form method="post"
+                action="{{ url_for('cluster_assign', project_id=project.id, cluster_id=cluster.id) }}"
+                style="display:flex;gap:8px;align-items:center">
+            <select name="person_id" style="font-size:0.83rem;padding:4px 8px;margin-bottom:0">
+              <option value="">— assign to person —</option>
+              {% for p in persons %}
+                <option value="{{ p.id }}" {{ 'selected' if cluster.person_id == p.id }}>{{ p.name }}</option>
+              {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-primary btn-sm">Assign</button>
+          </form>
+        </div>
+
+        <div class="face-grid">
+          {% for face_id in cluster.face_ids[:24] %}
+            {% set face = face_map.get(face_id) %}
+            {% if face and face.thumbnail_path %}
+              <div class="face-tile">
+                <a href="{{ url_for('photo_detail', project_id=project.id, photo_id=face.photo_id) }}">
+                  <img src="{{ url_for('serve_file', subpath=face.thumbnail_path) }}"
+                       alt="face" loading="lazy"/>
+                </a>
+              </div>
+            {% endif %}
+          {% endfor %}
+          {% if cluster.face_ids | length > 24 %}
+            <div class="face-tile" style="display:flex;align-items:center;justify-content:center;width:80px;height:80px;color:#9ca3af;font-size:0.8rem">
+              +{{ cluster.face_ids | length - 24 }} more
+            </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <p class="empty">No clusters yet. Run clustering to group similar faces automatically.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

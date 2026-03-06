@@ -1,3 +1,5 @@
 face_recognition
 numpy
 Pillow
+Flask
+scikit-learn

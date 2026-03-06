@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Projects – FaceSearch{% endblock %}
+{% block page_title %}Projects{% endblock %}
+{% set active_tab = "projects" %}
+
+{% block content %}
+{% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+
+<div class="row">
+  <div class="col">
+    <div class="card">
+      <h2>New Project</h2>
+      <form method="post" action="{{ url_for('project_create') }}">
+        <label>Name</label>
+        <input type="text" name="name" required placeholder="My Photo Collection"/>
+        <label>Description (optional)</label>
+        <textarea name="description" placeholder="What is this project about?"></textarea>
+        <button type="submit" class="btn btn-primary">Create Project</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="col" style="flex:2">
+    <div class="card">
+      <h2>All Projects</h2>
+      {% if projects %}
+        <table>
+          <thead><tr><th>Name</th><th>Description</th><th>Created</th><th></th></tr></thead>
+          <tbody>
+          {% for p in projects %}
+            <tr>
+              <td><a href="{{ url_for('project_photos', project_id=p.id) }}"><strong>{{ p.name }}</strong></a></td>
+              <td>{{ p.description or "—" }}</td>
+              <td>{{ p.created_at.strftime('%Y-%m-%d') }}</td>
+              <td>
+                <form method="post" action="{{ url_for('project_delete', project_id=p.id) }}"
+                      onsubmit="return confirm('Delete project {{ p.name | e }} and all its data?')">
+                  <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p class="empty">No projects yet. Create one to get started.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

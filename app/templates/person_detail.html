@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% set active_tab = "persons" %}
+{% set current_project = project %}
+{% block title %}{{ person.name }} – FaceSearch{% endblock %}
+{% block page_title %}{{ person.name }}{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('persons_list', project_id=project.id) }}" class="btn btn-secondary btn-sm">← Persons</a>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  {# Profile card #}
+  <div class="col" style="max-width:280px">
+    <div class="card" style="text-align:center">
+      {% set av = faces | selectattr('id', 'equalto', person.avatar_face_id) | list %}
+      {% if av and av[0].thumbnail_path %}
+        <img src="{{ url_for('serve_file', subpath=av[0].thumbnail_path) }}"
+             style="width:100px;height:100px;border-radius:50%;object-fit:cover;border:3px solid #7c3aed"/>
+      {% else %}
+        <div style="width:100px;height:100px;border-radius:50%;background:#ede9fe;display:inline-flex;align-items:center;justify-content:center;font-size:2.5rem;color:#7c3aed;border:3px solid #ede9fe;margin:0 auto">
+          {{ person.name[0].upper() }}
+        </div>
+      {% endif %}
+      <div style="font-size:1.2rem;font-weight:700;margin-top:10px">{{ person.name }}</div>
+      {% if person.date_of_birth %}<div class="text-muted">Born: {{ person.date_of_birth }}</div>{% endif %}
+      {% if person.tags %}
+        <div style="margin-top:8px">{% for tag in person.tags %}<span class="tag">{{ tag }}</span>{% endfor %}</div>
+      {% endif %}
+      {% if person.notes %}<p style="margin-top:10px;font-size:0.87rem;text-align:left">{{ person.notes }}</p>{% endif %}
+    </div>
+
+    <div class="card">
+      <h2>Edit Profile</h2>
+      <form method="post" action="{{ url_for('person_edit', project_id=project.id, person_id=person.id) }}">
+        <label>Name</label>
+        <input type="text" name="name" value="{{ person.name }}" required/>
+        <label>Date of birth</label>
+        <input type="date" name="date_of_birth" value="{{ person.date_of_birth or '' }}"/>
+        <label>Tags (comma-separated)</label>
+        <input type="text" name="tags" value="{{ person.tags | join(', ') }}"/>
+        <label>Notes</label>
+        <textarea name="notes">{{ person.notes }}</textarea>
+        <button type="submit" class="btn btn-primary btn-sm">Save</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Actions</h2>
+      <a href="{{ url_for('search_in_project', project_id=project.id) }}"
+         class="btn btn-primary btn-sm">Search by this person</a>
+      <hr/>
+      <form method="post"
+            action="{{ url_for('person_delete', project_id=project.id, person_id=person.id) }}"
+            onsubmit="return confirm('Delete person {{ person.name | e }}? Faces will become unassigned.')">
+        <button type="submit" class="btn btn-danger btn-sm mt-8">Delete person</button>
+      </form>
+    </div>
+  </div>
+
+  {# Faces #}
+  <div class="col">
+    <div class="card">
+      <h2>Faces ({{ faces | length }})</h2>
+      {% if faces %}
+        <div class="face-grid">
+          {% for face in faces %}
+            <div class="face-tile assigned">
+              {% if face.thumbnail_path %}
+                <a href="{{ url_for('photo_detail', project_id=project.id, photo_id=face.photo_id) }}">
+                  <img src="{{ url_for('serve_file', subpath=face.thumbnail_path) }}"
+                       alt="face" loading="lazy"
+                       style="{{ 'border-color:#7c3aed;border-width:3px' if face.id == person.avatar_face_id }}"/>
+                </a>
+              {% endif %}
+              {% if face.id != person.avatar_face_id %}
+                <form method="post"
+                      action="{{ url_for('face_set_avatar', project_id=project.id, face_id=face.id) }}"
+                      style="margin-top:3px">
+                  <button type="submit" class="btn btn-secondary btn-sm" style="font-size:0.7rem">Set avatar</button>
+                </form>
+              {% else %}
+                <div style="font-size:0.72rem;color:#7c3aed">★ avatar</div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="empty">No faces assigned to this person yet.</p>
+      {% endif %}
+    </div>
+
+    {# Photos #}
+    <div class="card">
+      <h2>Photos containing {{ person.name }} ({{ photos | length }})</h2>
+      {% if photos %}
+        <div class="photo-grid">
+          {% for photo in photos %}
+            <div class="photo-card">
+              <a href="{{ url_for('photo_detail', project_id=project.id, photo_id=photo.id) }}">
+                {% if photo.thumbnail_path %}
+                  <img src="{{ url_for('serve_file', subpath=photo.thumbnail_path) }}"
+                       alt="{{ photo.original_filename }}" loading="lazy"/>
+                {% else %}
+                  <div style="width:100%;height:140px;background:#e5e7eb;display:flex;align-items:center;justify-content:center;color:#9ca3af">No preview</div>
+                {% endif %}
+              </a>
+              <div class="info">{{ photo.original_filename }}</div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="empty">No photos yet.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

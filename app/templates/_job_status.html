@@ -1,0 +1,29 @@
+{# HTMX polling partial – returned by GET /jobs/<id>/status #}
+<div id="job-{{ job.id }}"
+  {% if job.status in ('queued', 'running') %}
+    hx-get="{{ url_for('job_status', job_id=job.id) }}"
+    hx-trigger="every 1500ms"
+    hx-target="#job-{{ job.id }}"
+    hx-swap="outerHTML"
+  {% endif %}
+  class="alert {{ 'alert-info' if job.status in ('queued','running') else ('alert-success' if job.status == 'done' else 'alert-error') }}"
+>
+  {% if job.status == 'queued' %}
+    ⏳ Queued…
+  {% elif job.status == 'running' %}
+    <div>⚙ Processing: {{ job.current_item }}/{{ job.total }} photos</div>
+    <div class="progress-wrap mt-8">
+      <div class="progress-bar" style="width:{{ job.progress }}%"></div>
+    </div>
+  {% elif job.status == 'done' %}
+    ✅ Done
+    {% if job.result %}
+      — {{ job.result.get('cluster_count', '') }}
+      {% if 'cluster_count' in job.result %}
+        clusters found ({{ job.result.get('noise_count', 0) }} unassigned faces)
+      {% endif %}
+    {% endif %}
+  {% else %}
+    ❌ Failed: {{ job.error }}
+  {% endif %}
+</div>

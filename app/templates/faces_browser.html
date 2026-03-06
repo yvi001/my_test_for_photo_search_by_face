@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% set active_tab = "faces" %}
+{% set current_project = project %}
+{% block title %}Faces – {{ project.name }}{% endblock %}
+{% block page_title %}Face Browser{% endblock %}
+
+{% block topbar_actions %}
+  <span class="badge">{{ (unassigned | length) + (assigned.values() | map('length') | sum) }} total faces</span>
+  <a href="{{ url_for('cluster_view', project_id=project.id) }}" class="btn btn-secondary btn-sm">Run Clustering &rarr;</a>
+{% endblock %}
+
+{% block content %}
+
+{# Assigned faces grouped by person #}
+{% for person_id, face_list in assigned.items() %}
+  {% set person = person_map.get(person_id) %}
+  {% if person %}
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+      <a href="{{ url_for('person_detail', project_id=project.id, person_id=person.id) }}" style="font-weight:600">
+        {{ person.name }}
+      </a>
+      <span class="badge">{{ face_list | length }} face(s)</span>
+    </div>
+    <div class="face-grid">
+      {% for face in face_list %}
+        <div class="face-tile assigned">
+          {% if face.thumbnail_path %}
+            <a href="{{ url_for('photo_detail', project_id=project.id, photo_id=face.photo_id) }}">
+              <img src="{{ url_for('serve_file', subpath=face.thumbnail_path) }}"
+                   alt="face" loading="lazy"/>
+            </a>
+          {% else %}
+            <div style="width:80px;height:80px;border-radius:50%;background:#e5e7eb;display:inline-flex;align-items:center;justify-content:center">👤</div>
+          {% endif %}
+          <div class="name">
+            <form method="post"
+                  action="{{ url_for('face_assign', project_id=project.id, face_id=face.id) }}">
+              <select name="person_id" style="font-size:0.72rem;padding:2px 4px;width:90px;margin-bottom:0"
+                      onchange="this.form.submit()">
+                <option value="">— unassign —</option>
+                {% for p in persons %}
+                  <option value="{{ p.id }}" {{ 'selected' if face.person_id == p.id }}>{{ p.name }}</option>
+                {% endfor %}
+              </select>
+            </form>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+{% endfor %}
+
+{# Unassigned faces #}
+{% if unassigned %}
+<div class="card">
+  <h2>Unassigned Faces ({{ unassigned | length }})</h2>
+  <div class="face-grid">
+    {% for face in unassigned %}
+      <div class="face-tile">
+        {% if face.thumbnail_path %}
+          <a href="{{ url_for('photo_detail', project_id=project.id, photo_id=face.photo_id) }}">
+            <img src="{{ url_for('serve_file', subpath=face.thumbnail_path) }}"
+                 alt="face" loading="lazy"/>
+          </a>
+        {% else %}
+          <div style="width:80px;height:80px;border-radius:50%;background:#e5e7eb;display:inline-flex;align-items:center;justify-content:center">👤</div>
+        {% endif %}
+        <div class="name">
+          <form method="post"
+                action="{{ url_for('face_assign', project_id=project.id, face_id=face.id) }}">
+            <select name="person_id" style="font-size:0.72rem;padding:2px 4px;width:90px;margin-bottom:0"
+                    onchange="this.form.submit()">
+              <option value="">— assign to —</option>
+              {% for p in persons %}
+                <option value="{{ p.id }}">{{ p.name }}</option>
+              {% endfor %}
+            </select>
+          </form>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% if not unassigned and not assigned %}
+  <p class="empty">No faces indexed yet. Upload photos and wait for extraction to finish.</p>
+{% endif %}
+{% endblock %}
